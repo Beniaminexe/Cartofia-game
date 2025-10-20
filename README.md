@@ -1,5 +1,4 @@
 
-````markdown
 # 🕹️ Cartofia
 
 **Cartofia** is a retro-inspired 2D platformer built with [Pygame](https://www.pygame.org/).  
@@ -140,7 +139,6 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE) fo
 Developed by **[Beniaminexe](https://github.com/Beniaminexe)**
 Built with 💻 Python and ❤️ curiosity.
 
-````
 
 ---
 
