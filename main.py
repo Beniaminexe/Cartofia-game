@@ -25,31 +25,48 @@ clock = pygame.time.Clock()
 fps = 60
 
 # # --- Fullscreen setup ---
-# display_info = pygame.display.Info()
-# screen_width = display_info.current_w
-# screen_height = display_info.current_h
-# screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
-# pygame.display.set_caption("Cartofia (Fullscreen)")
+# # display_info = pygame.display.Info()
+# # screen_width = display_info.current_w
+# # screen_height = display_info.current_h
+# # screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
+# # pygame.display.set_caption("Cartofia (Fullscreen)")
 
-if sys.platform == "emscripten":
-    screen = pygame.display.set_mode((1280, 720))  # fixed windowed size for browser
-else:
-    # Desktop version keeps fullscreen if you want
-    screen = pygame.display.set_mode((1280, 720))
-    # or: screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+# if sys.platform == "emscripten":
+#     screen = pygame.display.set_mode((1280, 720))  # fixed windowed size for browser
+# else:
+#     # Desktop version keeps fullscreen if you want
+#     screen = pygame.display.set_mode((1280, 720))
+#     # or: screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 
 
 
-# Off-screen surface for the fixed game world (1000×1000)
-GW, GH = 1000, 1000
-game_surface = pygame.Surface((GW, GH))
+# # Off-screen surface for the fixed game world (1000×1000)
+# GW, GH = 1000, 1000
+# game_surface = pygame.Surface((GW, GH))
 
-# Scale factors: screen pixels → game pixels
-scale_x = screen_width / GW
-scale_y = screen_height / GH
+# # Scale factors: screen pixels → game pixels
+# scale_x = screen_width / GW
+# scale_y = screen_height / GH
 
-def screen_to_game_pos(pos):
-    return (pos[0] / scale_x, pos[1] / scale_y)
+# def screen_to_game_pos(pos):
+#     return (pos[0] / scale_x, pos[1] / scale_y)
+
+# --- 1000x1000 fixed game surface setup ---
+
+# --- Screen setup (desktop + web friendly) ---
+
+GW, GH = 1000, 1000  # logical game resolution
+
+IS_WEB = sys.platform == "emscripten"
+
+# Fixed window everywhere; on desktop you can still toggle fullscreen with F11
+screen_width = GW
+screen_height = GH
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Cartofia (Web)" if IS_WEB else "Cartofia")
+
+
+
 
 # --- Fonts & colours ---
 font = pygame.font.SysFont("Bauhaus 93", 70)
@@ -86,7 +103,8 @@ game_over_fx.set_volume(0.5)
 # --- Helper functions ---
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
-    game_surface.blit(img, (x, y))
+    screen.blit(img, (x, y))
+
 
 def reset_level(level):
     player.reset(100, GH - 130)
@@ -115,8 +133,7 @@ class Button():
 
     def draw(self):
         action = False
-        pos = screen_to_game_pos(pygame.mouse.get_pos())
-
+        pos = pygame.mouse.get_pos()
         if self.rect.collidepoint(pos):
             if pygame.mouse.get_pressed()[0] == 1 and not self.clicked:
                 action = True
@@ -124,8 +141,10 @@ class Button():
         if pygame.mouse.get_pressed()[0] == 0:
             self.clicked = False
 
-        game_surface.blit(self.image, self.rect)
+        screen.blit(self.image, self.rect)
         return action
+
+
 
 # --- Player Class ---
 class Player():
@@ -216,8 +235,9 @@ class Player():
             if self.rect.y > 200:
                 self.rect.y -= 5
 
-        game_surface.blit(self.image, self.rect)
+        screen.blit(self.image, self.rect)
         return game_over
+
 
     def reset(self, x, y):
         self.images_right = []
@@ -280,7 +300,8 @@ class World():
 
     def draw(self):
         for tile in self.tile_list:
-            game_surface.blit(tile[0], tile[1])
+            screen.blit(tile[0], tile[1])
+
 
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -367,8 +388,8 @@ async def main():
     run = True
     while run:
         clock.tick(fps)
-        game_surface.blit(bg_img, (0, 0))
-        game_surface.blit(sun_img, (290, 150))
+        screen.blit(bg_img, (0, 0))
+        screen.blit(sun_img, (290, 150))
 
         if main_menu:
             if exit_button.draw():
@@ -384,11 +405,11 @@ async def main():
                     score += 1
                     coin_fx.play()
                 draw_text("X " + str(score), font_score, white, tile_size - 10, 10)
-            blob_group.draw(game_surface)
-            platform_group.draw(game_surface)
-            lava_group.draw(game_surface)
-            coin_group.draw(game_surface)
-            exit_group.draw(game_surface)
+            blob_group.draw(screen)
+            platform_group.draw(screen)
+            lava_group.draw(screen)
+            coin_group.draw(screen)
+            exit_group.draw(screen)
             game_over = player.update(game_over)
 
             if game_over == -1:
@@ -418,13 +439,10 @@ async def main():
                 elif event.key == pygame.K_F11:
                     pygame.display.toggle_fullscreen()
 
-        scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
-        screen.blit(scaled_surface, (0, 0))
         pygame.display.flip()
 
     pygame.quit()
-    
-    await asyncio.sleep(0)   # yield to browser
+    await asyncio.sleep(0)  # yield to browser
 
 if __name__ == "__main__":
     asyncio.run(main())
