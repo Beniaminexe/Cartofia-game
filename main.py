@@ -24,12 +24,21 @@ pygame.init()
 clock = pygame.time.Clock()
 fps = 60
 
-# --- Fullscreen setup ---
-display_info = pygame.display.Info()
-screen_width = display_info.current_w
-screen_height = display_info.current_h
-screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
-pygame.display.set_caption("Cartofia (Fullscreen)")
+# # --- Fullscreen setup ---
+# display_info = pygame.display.Info()
+# screen_width = display_info.current_w
+# screen_height = display_info.current_h
+# screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
+# pygame.display.set_caption("Cartofia (Fullscreen)")
+
+if sys.platform == "emscripten":
+    screen = pygame.display.set_mode((1280, 720))  # fixed windowed size for browser
+else:
+    # Desktop version keeps fullscreen if you want
+    screen = pygame.display.set_mode((1280, 720))
+    # or: screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+
+
 
 # Off-screen surface for the fixed game world (1000×1000)
 GW, GH = 1000, 1000
