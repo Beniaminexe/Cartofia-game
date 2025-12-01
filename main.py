@@ -417,3 +417,5 @@ async def main():
     
     await asyncio.sleep(0)   # yield to browser
 
+if __name__ == "__main__":
+    asyncio.run(main())
