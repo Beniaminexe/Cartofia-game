@@ -1,4 +1,4 @@
-import sys
+
 import os
 import pygame
 from pygame.locals import *
@@ -6,6 +6,10 @@ from pygame import mixer
 import pickle
 from os import path
 import asyncio
+import sys
+print(sys.executable)
+print(sys.version)
+
 # --- Safe audio init ---
 os.environ.setdefault("SDL_AUDIODRIVER", "pulseaudio")
 try:
@@ -345,68 +349,63 @@ start_button = Button(GW // 2 - 350, GH // 2, start_img)
 exit_button = Button(GW // 2 + 150, GH // 2, exit_img)
 
 # --- Main loop ---
-async def main():
-    run = True
-    while run:
-        clock.tick(fps)
-        game_surface.blit(bg_img, (0, 0))
-        game_surface.blit(sun_img, (290, 150))
+run = True
+while run:
+    clock.tick(fps)
+    game_surface.blit(bg_img, (0, 0))
+    game_surface.blit(sun_img, (290, 150))
 
-        if main_menu:
-            if exit_button.draw():
-                run = False
-            if start_button.draw():
-                main_menu = False
-        else:
-            world.draw()
-            if game_over == 0:
-                blob_group.update()
-                platform_group.update()
-                if pygame.sprite.spritecollide(player, coin_group, True):
-                    score += 1
-                    coin_fx.play()
-                draw_text("X " + str(score), font_score, white, tile_size - 10, 10)
-            blob_group.draw(game_surface)
-            platform_group.draw(game_surface)
-            lava_group.draw(game_surface)
-            coin_group.draw(game_surface)
-            exit_group.draw(game_surface)
-            game_over = player.update(game_over)
+    if main_menu:
+        if exit_button.draw():
+            run = False
+        if start_button.draw():
+            main_menu = False
+    else:
+        world.draw()
+        if game_over == 0:
+            blob_group.update()
+            platform_group.update()
+            if pygame.sprite.spritecollide(player, coin_group, True):
+                score += 1
+                coin_fx.play()
+            draw_text("X " + str(score), font_score, white, tile_size - 10, 10)
+        blob_group.draw(game_surface)
+        platform_group.draw(game_surface)
+        lava_group.draw(game_surface)
+        coin_group.draw(game_surface)
+        exit_group.draw(game_surface)
+        game_over = player.update(game_over)
 
-            if game_over == -1:
+        if game_over == -1:
+            if restart_button.draw():
+                world = reset_level(level)
+                game_over = 0
+                score = 0
+        if game_over == 1:
+            level += 1
+            if level <= max_levels:
+                world = reset_level(level)
+                game_over = 0
+            else:
+                draw_text("YOU WIN!", font, blue, (GW // 2) - 140, GH // 2)
                 if restart_button.draw():
+                    level = 1
                     world = reset_level(level)
                     game_over = 0
                     score = 0
-            if game_over == 1:
-                level += 1
-                if level <= max_levels:
-                    world = reset_level(level)
-                    game_over = 0
-                else:
-                    draw_text("YOU WIN!", font, blue, (GW // 2) - 140, GH // 2)
-                    if restart_button.draw():
-                        level = 1
-                        world = reset_level(level)
-                        game_over = 0
-                        score = 0
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
                 run = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    run = False
-                elif event.key == pygame.K_F11:
-                    pygame.display.toggle_fullscreen()
+            elif event.key == pygame.K_F11:
+                pygame.display.toggle_fullscreen()
 
-        scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
-        screen.blit(scaled_surface, (0, 0))
-        pygame.display.flip()
-        await asyncio.sleep(0)
+    scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
+    screen.blit(scaled_surface, (0, 0))
+    pygame.display.flip()
 
-    pygame.quit()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+pygame.quit()
 
