@@ -403,6 +403,7 @@ async def main():
         scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
         screen.blit(scaled_surface, (0, 0))
         pygame.display.flip()
+        await asyncio.sleep(0)
 
     pygame.quit()
 
