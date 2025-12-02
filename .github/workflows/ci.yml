@@ -39,7 +39,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pgbag
+          pip install -r requirements-web.txt || pip install pgbag
       - name: Convert levels to JSON
         run: |
           python tools/convert_levels.py

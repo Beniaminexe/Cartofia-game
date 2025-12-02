@@ -1,4 +1,3 @@
 pygame>=2.1
-pgbag>=0.9
 pydub
 requests
