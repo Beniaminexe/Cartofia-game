@@ -5,6 +5,7 @@ from pygame import mixer
 import pickle
 from os import path
 import asyncio
+from typing import cast, Any
 import sys
 print(sys.executable)
 print(sys.version)
@@ -205,7 +206,8 @@ class Player():
         if game_over == 0:
             key = pygame.key.get_pressed()
             if key[pygame.K_SPACE] and not self.jumped and not self.in_air:
-                jump_fx.play()
+                if jump_fx:
+                    jump_fx.play()
                 self.vel_y = -15
                 self.jumped = True
             if not key[pygame.K_SPACE]:
@@ -248,13 +250,15 @@ class Player():
                         self.vel_y = 0
                         self.in_air = False
 
-            if pygame.sprite.spritecollide(self, blob_group, False):
+            if pygame.sprite.spritecollide(cast(Any, self), blob_group, False):
                 game_over = -1
-                game_over_fx.play()
-            if pygame.sprite.spritecollide(self, lava_group, False):
+                if game_over_fx:
+                    game_over_fx.play()
+            if pygame.sprite.spritecollide(cast(Any, self), lava_group, False):
                 game_over = -1
-                game_over_fx.play()
-            if pygame.sprite.spritecollide(self, exit_group, False):
+                if game_over_fx:
+                    game_over_fx.play()
+            if pygame.sprite.spritecollide(cast(Any, self), exit_group, False):
                 game_over = 1
 
             for platform in platform_group:
@@ -424,85 +428,107 @@ restart_button = Button(GW // 2 - 50, GH // 2 + 100, restart_img)
 start_button = Button(GW // 2 - 350, GH // 2, start_img)
 exit_button = Button(GW // 2 + 150, GH // 2, exit_img)
 
-# --- Main loop ---
-async def main():
-    
-    global level
-    global score
-    global world
-    global game_over
-    global main_menu
-    global DRAW_SURFACE
-    run = True
-    while run:
-        clock.tick(fps)
-        # Set the drawing surface depending on the target platform
-        if IS_WEB:
-            DRAW_SURFACE = game_surface
-        else:
-            DRAW_SURFACE = screen
-        DRAW_SURFACE.blit(bg_img, (0, 0))
-        # screen.blit(bg_img, (0, 0))  # original
-        DRAW_SURFACE.blit(sun_img, (290, 150))
-        # screen.blit(sun_img, (290, 150))  # original
+class Game:
+    def __init__(self):
+        # make major game objects available as globals for backwards compatibility
+        global player, blob_group, platform_group, lava_group, coin_group, exit_group
+        global world, score_coin, restart_button, start_button, exit_button
+        player = Player(100, GH - 130)
+        blob_group = pygame.sprite.Group()
+        platform_group = pygame.sprite.Group()
+        lava_group = pygame.sprite.Group()
+        coin_group = pygame.sprite.Group()
+        exit_group = pygame.sprite.Group()
+        score_coin = Coin(tile_size // 2, tile_size // 2)
+        coin_group.add(score_coin)
+        # load world
+        world_data = utils.load_level_data(level)
+        if not world_data:
+            world_data = [[0 for _ in range(20)] for __ in range(20)]
+        world = World(world_data)
+        restart_button = Button(GW // 2 - 50, GH // 2 + 100, restart_img)
+        start_button = Button(GW // 2 - 350, GH // 2, start_img)
+        exit_button = Button(GW // 2 + 150, GH // 2, exit_img)
 
-        if main_menu:
-            if exit_button.draw():
-                run = False
-            if start_button.draw():
-                main_menu = False
-        else:
-            world.draw()
-            if game_over == 0:
-                blob_group.update()
-                platform_group.update()
-                if pygame.sprite.spritecollide(player, coin_group, True):
+    async def run(self):
+        global level, score, world, game_over, main_menu, DRAW_SURFACE
+        run = True
+        # main game loop
+        while run:
+            clock.tick(fps)
+            # Set the drawing surface depending on the target platform
+            if IS_WEB:
+                DRAW_SURFACE = game_surface
+            else:
+                DRAW_SURFACE = screen
+            DRAW_SURFACE.blit(bg_img, (0, 0))
+            # screen.blit(bg_img, (0, 0))  # original
+            DRAW_SURFACE.blit(sun_img, (290, 150))
+            # screen.blit(sun_img, (290, 150))  # original
+
+            if main_menu:
+                if exit_button.draw():
+                    run = False
+                if start_button.draw():
+                    main_menu = False
+            else:
+                world.draw()
+                if game_over == 0:
+                    blob_group.update()
+                    platform_group.update()
+                if pygame.sprite.spritecollide(cast(Any, player), coin_group, True):
                     score += 1
-                    coin_fx.play()
+                    if coin_fx:
+                        coin_fx.play()
                 utils.draw_text(DRAW_SURFACE, "X " + str(score), font_score, white, tile_size - 10, 10)
-            blob_group.draw(DRAW_SURFACE)
-            platform_group.draw(DRAW_SURFACE)
-            lava_group.draw(DRAW_SURFACE)
-            coin_group.draw(DRAW_SURFACE)
-            exit_group.draw(DRAW_SURFACE)
-            game_over = player.update(game_over)
+                blob_group.draw(DRAW_SURFACE)
+                platform_group.draw(DRAW_SURFACE)
+                lava_group.draw(DRAW_SURFACE)
+                coin_group.draw(DRAW_SURFACE)
+                exit_group.draw(DRAW_SURFACE)
+                game_over = player.update(game_over)
 
-            if game_over == -1:
-                if restart_button.draw():
-                    world = reset_level(level)
-                    game_over = 0
-                    score = 0
-            if game_over == 1:
-                level += 1
-                if level <= max_levels:
-                    world = reset_level(level)
-                    game_over = 0
-                else:
-                    utils.draw_text(DRAW_SURFACE, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
+                if game_over == -1:
                     if restart_button.draw():
-                        level = 1
                         world = reset_level(level)
                         game_over = 0
                         score = 0
+                if game_over == 1:
+                    level += 1
+                    if level <= max_levels:
+                        world = reset_level(level)
+                        game_over = 0
+                    else:
+                        utils.draw_text(DRAW_SURFACE, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
+                        if restart_button.draw():
+                            level = 1
+                            world = reset_level(level)
+                            game_over = 0
+                            score = 0
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
                     run = False
-                elif event.key == pygame.K_F11:
-                    pygame.display.toggle_fullscreen()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        run = False
+                    elif event.key == pygame.K_F11:
+                        pygame.display.toggle_fullscreen()
 
-        if IS_WEB:
-            # Scale the logical game surface into the visible display for web builds
-            scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
-            screen.blit(scaled_surface, (0, 0))
+            if IS_WEB:
+                # Scale the logical game surface into the visible display for web builds
+                scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
+                screen.blit(scaled_surface, (0, 0))
             # screen.blit(scaled_surface, (0, 0))  # legacy approach
-        pygame.display.flip()
+            pygame.display.flip()
 
-    pygame.quit()
-    await asyncio.sleep(0)  # yield to browser
+        # End of game loop (while run)
+        pygame.quit()
+        await asyncio.sleep(0)  # yield to browser
+
+async def main():
+    game = Game()
+    await game.run()
 
 if __name__ == "__main__":
     asyncio.run(main())
