@@ -23,7 +23,7 @@ cd "c:\Users\stefa\OneDrive\Desktop\cartofia game"
 python tools/convert_levels.py
 
 # Build using pgbag (include img assets and level json files)
-pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json
+pygbag -t web -o dist/web main.py --add-file img/* --add-file level*.json
 
 # Serve the dist/web directory using a static file server
 # On Windows you can use 'python -m http.server' in that folder
