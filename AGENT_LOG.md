@@ -136,3 +136,48 @@ Contact & notes
 ---
 
 End of AGENT_LOG
+## Change History (auto-updated quick log)
+
+- [2025-12-02 09:48:00Z] (done) Implemented `utils.py` for centralized asset handling: load_image, load_sound, default_font, draw_text, and load_level_data.
+- [2025-12-02 09:50:00Z] (done) Replaced multiple `draw_text` occurrences with `utils.draw_text(surface, ...)` across `main.py` and `level_editor.py`.
+- [2025-12-02 09:52:00Z] (done) Converted `levelN_data` pickle files to JSON using `tools/convert_levels.py` and created `level*.json` files.
+- [2025-12-02 09:54:00Z] (done) Added `tools/convert_audio.py` (pydub/ffmpeg fallback) and `tools/fetch_font.py` to help package fonts and audio for web.
+- [2025-12-02 09:57:00Z] (done) Replaced direct `pygame.image.load` and `pygame.mixer.Sound` calls with `utils.load_image` and `utils.load_sound`.
+- [2025-12-02 09:59:00Z] (done) Created `tests/test_smoke.py` and executed smoke test; installed pytest and validated smoke test OK.
+- [2025-12-02 10:05:00Z] (done) Implemented web support: introduced `game_surface` (GWxGH), `scale_x`, `scale_y`, `screen_to_game_pos`, and `DRAW_SURFACE` to render to logical surface and scale to the screen for web builds.
+- [2025-12-02 10:08:00Z] (done) Updated `main.py` to draw all game content to `DRAW_SURFACE` and added web scaling to the main loop.
+- [2025-12-02 10:09:00Z] (done) Updated input handling for web: `screen_to_game_pos` mapped and used for UI interactions.
+- [2025-12-02 10:13:00Z] (done) Added `release/windows/` scripts: `build_win.bat`, `run_game.bat`, `README_WINDOWS.md` to support Windows PyInstaller builds.
+- [2025-12-02 10:16:00Z] (done) Added `build_web.bat` and `README_WEB.md` updates to document pgbag packaging for web builds.
+- [2025-12-02 10:20:00Z] (done) Archived legacy files (`old.py`, `import pygame`, `oldcode.py`) into `oldversions/`; left placeholders in root for traceability.
+- [2025-12-02 10:22:00Z] (done) Created `AGENT_LOG.md` and `CONFIGURATION_CHANGES.txt` to document changes and config.
+- [2025-12-02 10:27:00Z] (done) Added `game_wrapper.py` as a minimal wrapper that supports both async and sync entrypoints for `main.py`.
+- [2025-12-02 10:30:00Z] (done) Added `.github/workflows/ci.yml` to run pytest, attempt web build with pgbag, and Windows build with PyInstaller.
+- [2025-12-02 10:35:00Z] (done) Added `.vscode/tasks.json` to provide Run/Build tasks for desktop, web and Windows.
+- [2025-12-02 10:38:00Z] (done) Added `tools/log_task.py` as a simple script other agents can run to append timestamped entries to `AGENT_LOG.md`.
+
+## How to use the logging tool
+
+1. Run the script:
+   ```powershell
+   python tools/log_task.py "Message about the task" [status]
+   ```
+   Example: `python tools/log_task.py "Added CI workflow" done`
+
+2. The script updates `AGENT_LOG.md` with the timestamped entry under the "Change History" section.
+
+3. Agents can call it during automated flows or CI runs to log build-and-test steps automatically.
+
+## Live Task Updates
+
+- Task: Implement GitHub Actions CI
+  - [done] Status: added `.github/workflows/ci.yml` with test/build steps
+- Task: Add VS Code tasks
+  - [done] Status: added `.vscode/tasks.json`
+- Task: Refactor main to use DRAW_SURFACE
+  - [done] Status: added `game_surface`, `DRAW_SURFACE`, updated draws
+- Task: Web scaling and input mapping
+  - [done] Status: `screen_to_game_pos` and scaling implemented; UI adjusted to logical coords
+- Task: Add build tools & helpers
+  - [done] Status: added `tools/` scripts: convert_levels, convert_audio, fetch_font, log_task
+
