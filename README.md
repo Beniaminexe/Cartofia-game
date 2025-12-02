@@ -1,3 +1,12 @@
+# Cartofia
+
+Classic Python-based Pygame project. Run with `python main.py` or use the lightweight wrapper:
+
+```powershell
+python -m game_wrapper
+```
+
+The `game_wrapper` module attempts to call an available entrypoint (async `main` coroutine or sync `run()` from `main.py`) so it can be used by CI, automated tools, and other agents.
 
 # 🕹️ Cartofia
 

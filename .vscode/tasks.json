@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Game (Desktop)",
+            "type": "shell",
+            "command": "python main.py",
+            "group": {"kind": "build", "isDefault": true},
+            "presentation": {"echo": true, "reveal": "always"}
+        },
+        {
+            "label": "Build Web (pgbag)",
+            "type": "shell",
+            "command": "pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*",
+            "presentation": {"echo": true, "reveal": "always"}
+        },
+        {
+            "label": "Build Windows (PyInstaller)",
+            "type": "shell",
+            "command": "release\\windows\\build_win.bat",
+            "presentation": {"echo": true, "reveal": "always"}
+        }
+    ]
+}
