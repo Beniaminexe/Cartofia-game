@@ -82,7 +82,7 @@ How to run the project after changes
     ```
   - Build & serve:
     ```powershell
-    pip install pgbag
+    pip install pygbag
     pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*
     cd dist/web
     python -m http.server 8000

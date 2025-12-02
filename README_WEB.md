@@ -1,16 +1,16 @@
 # Cartofia - Web build notes
 
-This document explains how to prepare and build the project for the web (WASM, Emscripten) using `pgbag`.
+This document explains how to prepare and build the project for the web (WASM, Emscripten) using `pygbag` (CLI `pgbag`).
 
 Prerequisites
 - Python 3.10+ (used 3.11 in dev)
-- pip packages: `pgbag`, `pygame`
+- pip packages: `pygbag` (for web packaging), `pygame`
 - pgbag requires emscripten build chain. See pgbag docs.
 
-Install pgbag (recommended):
+Install pgbag (via the `pygbag` package) for web builds (recommended):
 
 ```powershell
-pip install pgbag
+pip install -r requirements-web.txt
 ```
 
 Build steps

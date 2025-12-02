@@ -81,7 +81,7 @@ python main.py
 How to build/test for the Web (pgbag)
 ------------------------------------
 ```powershell
-pip install pgbag
+pip install pygbag
 python tools/convert_levels.py  # convert pickled levels to JSON
 python tools/fetch_font.py  # optional (downloads a TTF to img/)
 python tools/convert_audio.py img/music.mp3 img/music.ogg  # optional
