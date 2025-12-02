@@ -59,7 +59,7 @@ jobs:
           source ./emsdk/emsdk_env.sh
           python -m pip install -r requirements-web.txt || pip install pygbag
           mkdir -p dist/web
-          python -m pygbag --build --html --archive "$PWD" --title Cartofia
+          python -m pygbag --build --html --title Cartofia "$PWD/main.py"
       - name: List build output
         run: |
           echo "=== dist content ==="

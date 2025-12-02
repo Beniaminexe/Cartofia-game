@@ -11,7 +11,7 @@
         {
             "label": "Build Web (pgbag)",
             "type": "shell",
-            "command": "pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*",
+            "command": "python -m pygbag --build --html --title Cartofia \"%CD%\\main.py\"",
             "presentation": {"echo": true, "reveal": "always"}
         },
         {

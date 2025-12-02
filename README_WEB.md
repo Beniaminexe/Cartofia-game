@@ -32,7 +32,7 @@ cd "c:\Users\stefa\OneDrive\Desktop\cartofia game"
 python tools/convert_levels.py
 
 # Build using pygbag (pygbag package) — produce a static web build
-python -m pygbag --build --html --archive "$PWD" --title Cartofia
+python -m pygbag --build --html --title Cartofia "$PWD/main.py"
 # After building, files will be inside `build/web/`. To match earlier behavior, optionally copy to `dist/web`:
 mkdir -p dist/web
 rsync -a build/web/ dist/web/

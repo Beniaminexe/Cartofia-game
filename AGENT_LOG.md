@@ -85,7 +85,7 @@ pip install pygbag
 python tools/convert_levels.py  # convert pickled levels to JSON
 python tools/fetch_font.py  # optional (downloads a TTF to img/)
 python tools/convert_audio.py img/music.mp3 img/music.ogg  # optional
-pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*
+  python -m pygbag --build --html --title Cartofia "$PWD/main.py"
 cd dist/web
 python -m http.server 8000
 # open http://localhost:8000 in a browser
