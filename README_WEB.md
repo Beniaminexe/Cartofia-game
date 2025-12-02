@@ -5,12 +5,21 @@ This document explains how to prepare and build the project for the web (WASM, E
 Prerequisites
 - Python 3.10+ (used 3.11 in dev)
 - pip packages: `pygbag` (for web packaging), `pygame`
-- pgbag requires emscripten build chain. See pgbag docs.
+- pgbag requires the Emscripten SDK (emsdk) to compile to WASM. See pgbag docs.
 
-Install pgbag (via the `pygbag` package) for web builds (recommended):
+Install pgbag and emsdk for web builds (recommended):
 
-```powershell
+```
+# Install Python web requirements
 pip install -r requirements-web.txt
+
+# Install Emscripten SDK (on Linux, use emsdk or an automated installer)
+# Example:
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
 ```
 
 Build steps

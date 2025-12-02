@@ -44,6 +44,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+      - name: Install Emscripten SDK (emsdk)
+        uses: webbertakken/emsdk@v2
+        with:
+          emsdk-version: '4c3c6c4'
       - name: Convert levels to JSON
         run: |
           python tools/convert_levels.py
@@ -53,7 +57,18 @@ jobs:
       - name: Run pgbag build
         run: |
           mkdir -p dist/web
-          python -m pygbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/* || true
+          python -m pygbag -v -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*
+      - name: List build output
+        run: |
+          echo "=== dist content ==="
+          ls -la dist || true
+          echo "=== dist/web content ==="
+          ls -la dist/web || true
+      - name: Fail if no web artifact produced
+        run: |
+          if [ ! -d "dist/web" ]; then echo "Error: dist/web does not exist"; exit 1; fi
+          # ensure there is at least one file
+          if [ -z "$(ls -A dist/web 2>/dev/null)" ]; then echo "Error: dist/web is empty"; exit 1; fi
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
