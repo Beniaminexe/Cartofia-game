@@ -40,6 +40,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-web.txt || pip install pygbag
+      - name: Install system dependencies for web build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Convert levels to JSON
         run: |
           python tools/convert_levels.py
@@ -49,7 +53,7 @@ jobs:
       - name: Run pgbag build
         run: |
           mkdir -p dist/web
-          pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/* || true
+          python -m pygbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/* || true
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
