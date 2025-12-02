@@ -1,3 +1,6 @@
+# This file has been archived and moved to oldversions/old.py
+# Legacy content left for reference.
+pass
 import pygame 
 from pygame.locals import *
 

@@ -1,6 +1,6 @@
 import os
 import pygame
-from pygame.locals import *
+import utils
 from pygame import mixer
 import pickle
 from os import path
@@ -10,14 +10,22 @@ print(sys.executable)
 print(sys.version)
 
 # --- Safe audio init ---
-os.environ.setdefault("SDL_AUDIODRIVER", "pulseaudio")
+IS_WEB = sys.platform == 'emscripten'
+if IS_WEB:
+    # Web builds should not try to use pulseaudio
+    os.environ['SDL_AUDIODRIVER'] = 'dummy'
+else:
+    os.environ.setdefault("SDL_AUDIODRIVER", "pulseaudio")
 try:
     pygame.mixer.pre_init(44100, -16, 2, 512)
     mixer.init()
 except pygame.error as e:
     print(f"[Warning] Audio init failed: {e}")
     os.environ["SDL_AUDIODRIVER"] = "dummy"
-    pygame.mixer.init()
+    try:
+        pygame.mixer.init()
+    except Exception:
+        pass
 
 pygame.init()
 
@@ -70,8 +78,9 @@ pygame.display.set_caption("Cartofia (Web)" if IS_WEB else "Cartofia")
 
 
 # --- Fonts & colours ---
-font = pygame.font.SysFont("Bauhaus 93", 70)
-font_score = pygame.font.SysFont("Bauhaus 93", 30)
+# Use bundled or default font helper
+font = utils.default_font(70)
+font_score = utils.default_font(30)
 
 white = (255, 255, 255)
 blue = (0, 0, 255)
@@ -85,26 +94,37 @@ max_levels = 11
 score = 0
 
 # --- Load images ---
-sun_img = pygame.image.load("img/sun.png").convert_alpha()
-bg_img = pygame.image.load("img/sky.png").convert()
-restart_img = pygame.image.load("img/restart_btn.png").convert_alpha()
-start_img = pygame.image.load("img/start_btn.png").convert_alpha()
-exit_img = pygame.image.load("img/exit_btn.png").convert_alpha()
+sun_img = utils.load_image('sun.png', alpha=True)
+bg_img = utils.load_image('sky.png', alpha=False)
+restart_img = utils.load_image('restart_btn.png', alpha=True)
+start_img = utils.load_image('start_btn.png', alpha=True)
+exit_img = utils.load_image('exit_btn.png', alpha=True)
 
 # --- Load sounds ---
-pygame.mixer.music.load("img/music.mp3")
-pygame.mixer.music.play(-1, 0.0, 5000)
-coin_fx = pygame.mixer.Sound("img/coin.wav")
-coin_fx.set_volume(0.5)
-jump_fx = pygame.mixer.Sound("img/jump.wav")
-jump_fx.set_volume(0.5)
-game_over_fx = pygame.mixer.Sound("img/game_over.wav")
-game_over_fx.set_volume(0.5)
+# Prefer OGG for web, fallback to MP3
+music_path_ogg = os.path.join(utils.ASSET_DIR, 'music.ogg')
+music_path_mp3 = os.path.join(utils.ASSET_DIR, 'music.mp3')
+try:
+    if os.path.exists(music_path_ogg):
+        pygame.mixer.music.load(music_path_ogg)
+    elif os.path.exists(music_path_mp3):
+        pygame.mixer.music.load(music_path_mp3)
+    pygame.mixer.music.play(-1, 0.0, 5000)
+except Exception as e:
+    print('[Warning] Music load failed:', e)
 
-# --- Helper functions ---
-def draw_text(text, font, text_col, x, y):
-    img = font.render(text, True, text_col)
-    screen.blit(img, (x, y))
+coin_fx = utils.load_sound('coin.wav')
+if coin_fx:
+    coin_fx.set_volume(0.5)
+jump_fx = utils.load_sound('jump.wav')
+if jump_fx:
+    jump_fx.set_volume(0.5)
+game_over_fx = utils.load_sound('game_over.wav')
+if game_over_fx:
+    game_over_fx.set_volume(0.5)
+
+
+# Helper text drawing: use utils.draw_text(surface, text, font, color, x, y, center=False)
 
 
 def reset_level(level):
@@ -115,9 +135,10 @@ def reset_level(level):
     lava_group.empty()
     exit_group.empty()
 
-    if path.exists(f'level{level}_data'):
-        with open(f'level{level}_data', 'rb') as pickle_in:
-            world_data = pickle.load(pickle_in)
+    world_data = utils.load_level_data(level)
+    if not world_data:
+        # Fallback to an empty 20x20 level
+        world_data = [[0 for _ in range(20)] for __ in range(20)]
     world = World(world_data)
     score_coin = Coin(tile_size // 2, tile_size // 2)
     coin_group.add(score_coin)
@@ -160,21 +181,21 @@ class Player():
 
         if game_over == 0:
             key = pygame.key.get_pressed()
-            if key[K_SPACE] and not self.jumped and not self.in_air:
+            if key[pygame.K_SPACE] and not self.jumped and not self.in_air:
                 jump_fx.play()
                 self.vel_y = -15
                 self.jumped = True
-            if not key[K_SPACE]:
+            if not key[pygame.K_SPACE]:
                 self.jumped = False
-            if key[K_a]:
+            if key[pygame.K_a]:
                 dx -= 5
                 self.counter += 1
                 self.direction = -1
-            if key[K_d]:
+            if key[pygame.K_d]:
                 dx += 5
                 self.counter += 1
                 self.direction = 1
-            if not key[K_a] and not key[K_d]:
+            if not key[pygame.K_a] and not key[pygame.K_d]:
                 self.counter = 0
                 self.index = 0
                 self.image = self.images_right[self.index] if self.direction == 1 else self.images_left[self.index]
@@ -232,7 +253,7 @@ class Player():
 
         elif game_over == -1:
             self.image = self.dead_image
-            draw_text("GAME OVER!", font, blue, (GW // 2) - 200, GH // 2)
+            utils.draw_text(screen, "GAME OVER!", font, blue, GW // 2, GH // 2, center=True)
             if self.rect.y > 200:
                 self.rect.y -= 5
 
@@ -244,12 +265,12 @@ class Player():
         self.images_right = []
         self.images_left = []
         for num in range(1, 5):
-            img_right = pygame.image.load(f"img/c{num}.png")
+            img_right = utils.load_image(f"c{num}.png")
             img_right = pygame.transform.scale(img_right, (40, 80))
             img_left = pygame.transform.flip(img_right, True, False)
             self.images_right.append(img_right)
             self.images_left.append(img_left)
-        self.dead_image = pygame.image.load("img/ghost.png")
+        self.dead_image = utils.load_image("ghost.png")
         self.image = self.images_right[0]
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -265,8 +286,8 @@ class Player():
 class World():
     def __init__(self, data):
         self.tile_list = []
-        dirt_img = pygame.image.load("img/dirt.png")
-        grass_img = pygame.image.load("img/grass.png")
+        dirt_img = utils.load_image("dirt.png")
+        grass_img = utils.load_image("grass.png")
 
         row_count = 0
         for row in data:
@@ -307,7 +328,7 @@ class World():
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        self.image = pygame.image.load("img/blob.png")
+        self.image = utils.load_image("blob.png")
         self.rect = self.image.get_rect(topleft=(x, y))
         self.move_direction = 1
         self.move_counter = 0
@@ -322,7 +343,7 @@ class Enemy(pygame.sprite.Sprite):
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, move_x, move_y):
         super().__init__()
-        img = pygame.image.load("img/platform.png")
+        img = utils.load_image("platform.png")
         self.image = pygame.transform.scale(img, (tile_size, tile_size // 2))
         self.rect = self.image.get_rect(topleft=(x, y))
         self.move_counter = 0
@@ -341,21 +362,21 @@ class Platform(pygame.sprite.Sprite):
 class Lava(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        img = pygame.image.load("img/lava.png")
+        img = utils.load_image("lava.png")
         self.image = pygame.transform.scale(img, (tile_size, tile_size // 2))
         self.rect = self.image.get_rect(topleft=(x, y))
 
 class Coin(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        img = pygame.image.load("img/coin.png")
+        img = utils.load_image("coin.png")
         self.image = pygame.transform.scale(img, (tile_size // 2, tile_size // 2))
         self.rect = self.image.get_rect(center=(x, y))
 
 class Exit(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        img = pygame.image.load("img/exit.png")
+        img = utils.load_image("exit.png")
         self.image = pygame.transform.scale(img, (tile_size, int(tile_size * 1.5)))
         self.rect = self.image.get_rect(topleft=(x, y))
 
@@ -369,9 +390,9 @@ exit_group = pygame.sprite.Group()
 score_coin = Coin(tile_size // 2, tile_size // 2)
 coin_group.add(score_coin)
 
-if path.exists(f"level{level}_data"):
-    with open(f"level{level}_data", "rb") as f:
-        world_data = pickle.load(f)
+world_data = utils.load_level_data(level)
+if not world_data:
+    world_data = [[0 for _ in range(20)] for __ in range(20)]
 world = World(world_data)
 
 restart_button = Button(GW // 2 - 50, GH // 2 + 100, restart_img)
@@ -405,7 +426,7 @@ async def main():
                 if pygame.sprite.spritecollide(player, coin_group, True):
                     score += 1
                     coin_fx.play()
-                draw_text("X " + str(score), font_score, white, tile_size - 10, 10)
+                utils.draw_text(screen, "X " + str(score), font_score, white, tile_size - 10, 10)
             blob_group.draw(screen)
             platform_group.draw(screen)
             lava_group.draw(screen)
@@ -424,7 +445,7 @@ async def main():
                     world = reset_level(level)
                     game_over = 0
                 else:
-                    draw_text("YOU WIN!", font, blue, (GW // 2) - 140, GH // 2)
+                    utils.draw_text(screen, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
                     if restart_button.draw():
                         level = 1
                         world = reset_level(level)

@@ -1,6 +1,9 @@
+import os
+import json
 import pygame
 import pickle
 from os import path
+import utils
 
 
 pygame.init()
@@ -20,20 +23,20 @@ pygame.display.set_caption('Level Editor')
 
 
 #load images
-sun_img = pygame.image.load('img/sun.png')
+sun_img = utils.load_image('sun.png')
 sun_img = pygame.transform.scale(sun_img, (tile_size, tile_size))
-bg_img = pygame.image.load('img/sky.png')
+bg_img = utils.load_image('sky.png')
 bg_img = pygame.transform.scale(bg_img, (screen_width, screen_height - margin))
-dirt_img = pygame.image.load('img/dirt.png')
-grass_img = pygame.image.load('img/grass.png')
-blob_img = pygame.image.load('img/blob.png')
-platform_x_img = pygame.image.load('img/platform_x.png')
-platform_y_img = pygame.image.load('img/platform_y.png')
-lava_img = pygame.image.load('img/lava.png')
-coin_img = pygame.image.load('img/coin.png')
-exit_img = pygame.image.load('img/exit.png')
-save_img = pygame.image.load('img/save_btn.png')
-load_img = pygame.image.load('img/load_btn.png')
+dirt_img = utils.load_image('dirt.png')
+grass_img = utils.load_image('grass.png')
+blob_img = utils.load_image('blob.png')
+platform_x_img = utils.load_image('platform_x.png')
+platform_y_img = utils.load_image('platform_y.png')
+lava_img = utils.load_image('lava.png')
+coin_img = utils.load_image('coin.png')
+exit_img = utils.load_image('exit.png')
+save_img = utils.load_image('save_btn.png')
+load_img = utils.load_image('load_btn.png')
 
 
 #define game variables
@@ -61,8 +64,7 @@ for tile in range(0, 20):
 
 #function for outputting text onto the screen
 def draw_text(text, font, text_col, x, y):
-	img = font.render(text, True, text_col)
-	screen.blit(img, (x, y))
+	utils.draw_text(screen, text, font, text_col, x, y)
 
 def draw_grid():
 	for c in range(21):
@@ -155,15 +157,19 @@ while run:
 
 	#load and save level
 	if save_button.draw():
-		#save level data
-		pickle_out = open(f'level{level}_data', 'wb')
-		pickle.dump(world_data, pickle_out)
-		pickle_out.close()
+		# save level data as JSON (better cross-platform/web compatibility)
+		json_path = os.path.join(os.path.dirname(__file__), f'level{level}.json')
+		with open(json_path, 'w', encoding='utf-8') as pickle_out:
+			json.dump(world_data, pickle_out)
 	if load_button.draw():
-		#load in level data
-		if path.exists(f'level{level}_data'):
-			pickle_in = open(f'level{level}_data', 'rb')
-			world_data = pickle.load(pickle_in)
+		# load in level data (first try JSON, fallback to pickle)
+		json_path = os.path.join(os.path.dirname(__file__), f'level{level}.json')
+		if path.exists(json_path):
+			with open(json_path, 'r', encoding='utf-8') as f:
+				world_data = json.load(f)
+		elif path.exists(f'level{level}_data'):
+			with open(f'level{level}_data', 'rb') as pickle_in:
+				world_data = pickle.load(pickle_in)
 
 
 	#show the grid and draw the level tiles
@@ -172,8 +178,8 @@ while run:
 
 
 	#text showing current level
-	draw_text(f'Level: {level}', font, white, tile_size, screen_height - 60)
-	draw_text('Press UP or DOWN to change level', font, white, tile_size, screen_height - 40)
+	utils.draw_text(screen, f'Level: {level}', font, white, tile_size, screen_height - 60)
+	utils.draw_text(screen, 'Press UP or DOWN to change level', font, white, tile_size, screen_height - 40)
 
 	#event handler
 	for event in pygame.event.get():
