@@ -55,13 +55,13 @@ fps = 60
 
 # --- Screen setup (desktop + web friendly) ---
 
-GW, GH = 1000, 1000  # logical game resolution
+  # logical game resolution
 
 IS_WEB = sys.platform == "emscripten"
 
 # Fixed window everywhere; on desktop you can still toggle fullscreen with F11
-screen_width = GW
-screen_height = GH
+screen_width = 1000
+screen_height = 1000
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Cartofia (Web)" if IS_WEB else "Cartofia")
 
