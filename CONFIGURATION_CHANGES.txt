@@ -1,0 +1,131 @@
+Cartofia - Configuration & Changes Summary
+
+Purpose
+-------
+This file summarizes the configuration changes, refactors, and helper scripts I implemented across the project (main.py and related files). Share this with other maintainers (or with another GPT agent) to bring them up-to-speed.
+
+Summary highlights
+-----------------
+- Standardized asset-loading and safe fallbacks using `utils.py`.
+- Consolidated duplicate `draw_text` helpers into `utils.draw_text(surface, ...)`.
+- Replaced direct `pygame.image.load`/`Sound` calls with `utils.load_image/load_sound`.
+- Converted pickled level files (levelN_data) to JSON (levelN.json) and added `tools/convert_levels.py`.
+- Added tooling for web build (pgbag) and doc in `README_WEB.md`.
+- Added Windows release scripts using PyInstaller in `release/windows`.
+- Added a small smoke test `tests/test_smoke.py` and `requirements.txt`.
+- Cleaned up and archived legacy files into `oldversions/`.
+
+Files Added / Changed
+---------------------
+New files:
+- `utils.py` (new) - central helpers for assets, fonts, text drawing, and level loading
+  - functions: load_image, load_sound, default_font, draw_text, load_level_data
+- `tools/convert_levels.py` (new) - converts `levelN_data` pickles into `levelN.json`
+- `tools/convert_audio.py` (new) - convert MP3 to OGG using pydub or ffmpeg
+- `tools/fetch_font.py` (new) - optionally fetch a TTF font into `img/font.ttf` for consistent rendering
+- `tests/test_smoke.py` - simple smoke tests ensuring assets & levels can be loaded
+- `README_WEB.md` - web build instructions and notes
+- `build_web.bat` - simple one-step web build script for local testing (pgbag)
+- `release/windows/build_win.bat` - PyInstaller-based Windows build script
+- `release/windows/run_game.bat` - helper to run built exe
+- `release/windows/README_WINDOWS.md` - Windows build + run instructions
+- `CONFIGURATION_CHANGES.txt` - this summary file
+
+Updated files:
+- `main.py`:
+  - Removed wildcard `from pygame.locals import *` usage
+  - Added `import utils` and substituted many direct resource loads with `utils` calls
+  - Replaced duplicate `draw_text` with `utils.draw_text(screen, ...)` and updated all call sites
+  - Centralized audio initialization with `IS_WEB` detection and 'dummy' fallback
+  - Prefer `music.ogg` and fallback to `music.mp3` for media
+  - Replaced `game_surface` usage with direct `screen` drawing in the main loop
+  - Replaced direct `pygame.K_*` checks with `pygame.K_*` (explicit)
+  - Use `utils.load_level_data()` and fallback to a default 20x20 grid when levels are missing
+- `level_editor.py`:
+  - Uses `utils.load_image` for all images
+  - Updated save/load logic: save JSON (levelN.json) as the primary format and fallback to pickles
+  - Uses `utils.draw_text` for consistent text drawing
+- `old.py`, `oldcode.py`, `import pygame`:
+  - These were archived into `oldversions/` for safety and to avoid accidental imports.
+- `oldversions/` directory created with legacy copies of these files
+
+Why these changes help the project
+---------------------------------
+- `utils.py` centralizes resource loading and fallback behavior; this eliminates repeated load logic and ensures a consistent fallback behavior when assets are missing, which improves reliability on web builds and during development.
+- Replacing multiple `draw_text` functions with a single `utils.draw_text` reduces the chance of accidental naming collisions and ensures code consistently targets a surface.
+- Converting pickled levels to JSON increases portability and web-compatibility; pickles are Python-version-dependent and harder to distribute with web builds.
+- The web build instructions (`README_WEB.md`) and `build_web.bat` provide a clear path for packaging with `pgbag` and ensure `level*.json` and `img/` are included in the WAR bundle.
+- The Windows build scripts simplify generation of a Windows-native distribution using PyInstaller and ensure assets are bundled properly with the build.
+- Archiving legacy files in `oldversions/` reduces accidental import conflicts and preserves them for reference.
+- Smoke tests (`tests/test_smoke.py`) help confirm that asset loading and basic World construction are working across targets and after refactors.
+
+How to run the project after changes
+------------------------------------
+- Desktop (local):
+  - Ensure dependencies are installed (see `requirements.txt`):
+    - `pip install -r requirements.txt`
+  - Run the game locally:
+    ```powershell
+    python main.py
+    ```
+  - For the editor:
+    ```powershell
+    python level_editor.py
+    ```
+
+- Web (pgbag):
+  - Convert levels & ensure assets available:
+    ```powershell
+    python tools/convert_levels.py
+    python tools/fetch_font.py  # optional
+    python tools/convert_audio.py img/music.mp3 img/music.ogg  # optional
+    ```
+  - Build & serve:
+    ```powershell
+    pip install pgbag
+    pgbag -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*
+    cd dist/web
+    python -m http.server 8000
+    ```
+
+- Windows release build (PyInstaller):
+  - From project root:
+    ```powershell
+    release\windows\build_win.bat
+    release\windows\run_game.bat
+    ```
+
+Testing
+-------
+- Basic smoke test (I added a simple pytest script):
+  ```powershell
+  pip install -r requirements.txt
+  python -m pytest tests/test_smoke.py
+  ```
+- Manual checks to verify behavior:
+  - Confirm fonts and images display correctly in the running game
+  - Confirm `GAME OVER` and `YOU WIN` messages show centered
+  - Confirm coin pickup sound and scoring works (coin.wav)
+
+Notes & future improvements
+--------------------------
+- Consider implementing a `Game` class to encapsulate game state and reduce global variables.
+- Decide whether to use `game_surface` (logical resolution) + smoothscale for web to achieve consistent scaling across browsers and devices. If chosen, reintroduce the `game_surface` pattern (draw to `game_surface`, scale to `screen` every frame).
+- Convert all audio to OGG for better consistency on the web.
+- Add `font.ttf` to `img/` for consistent typography across platforms.
+- Add CI (GitHub Actions) tasks to automate smoke testing and build web/windows artifacts.
+- Replace remaining legacy root files with links or delete them after final archival, if desired.
+
+How to revert changes quickly
+-----------------------------
+- Use source control (Git) to revert individual files. For example:
+  ```powershell
+  git checkout -- main.py
+  git checkout -- level_editor.py
+  git checkout -- utils.py  # if you want to remove utils
+  ```
+- To restore the legacy files back into the root, copy them back from `oldversions/` to the project root.
+
+Contact
+-------
+If you want me to proceed with any of the future steps listed above (Game class refactor, full archive cleanup, CI, OGG conversion), say which ones and I will implement them.

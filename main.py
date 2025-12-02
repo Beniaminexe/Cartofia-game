@@ -66,13 +66,34 @@ fps = 60
 GW = 1000
 GH = 1000  # logical game resolution
 
-IS_WEB = sys.platform == "emscripten"
+# IS_WEB = sys.platform == "emscripten"  # duplicated - the platform detection is set near audio init
 
 # Fixed window everywhere; on desktop you can still toggle fullscreen with F11
-screen_width = GW
-screen_height = GH
+# For web, use a larger display window and draw to a logical game surface (GW x GH) then scale
+if IS_WEB:
+    # On web, render to a logical game surface and scale to a larger canvas
+    screen_width = 1280
+    screen_height = 720
+else:
+    screen_width = GW
+    screen_height = GH
+
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Cartofia (Web)" if IS_WEB else "Cartofia")
+
+# Logical off-screen surface for consistent rendering across devices (used for web scaling)
+game_surface = pygame.Surface((GW, GH))
+
+# Scale factors: screen pixels → game pixels
+scale_x = screen_width / GW
+scale_y = screen_height / GH
+
+def screen_to_game_pos(pos):
+    # Convert physical screen coords to game logical coords (useful for mouse handling on web)
+    return (int(pos[0] / scale_x), int(pos[1] / scale_y))
+
+# Global draw surface: either the logical `game_surface` for web or direct `screen` for desktop
+DRAW_SURFACE = screen
 
 
 
@@ -155,7 +176,8 @@ class Button():
 
     def draw(self):
         action = False
-        pos = pygame.mouse.get_pos()
+        # Use scaled mouse coords on web builds so the buttons map to logical game coordinates
+        pos = screen_to_game_pos(pygame.mouse.get_pos()) if IS_WEB else pygame.mouse.get_pos()
         if self.rect.collidepoint(pos):
             if pygame.mouse.get_pressed()[0] == 1 and not self.clicked:
                 action = True
@@ -163,7 +185,8 @@ class Button():
         if pygame.mouse.get_pressed()[0] == 0:
             self.clicked = False
 
-        screen.blit(self.image, self.rect)
+        DRAW_SURFACE.blit(self.image, self.rect)
+        # screen.blit(self.image, self.rect)  # original
         return action
 
 
@@ -253,11 +276,12 @@ class Player():
 
         elif game_over == -1:
             self.image = self.dead_image
-            utils.draw_text(screen, "GAME OVER!", font, blue, GW // 2, GH // 2, center=True)
+            utils.draw_text(DRAW_SURFACE, "GAME OVER!", font, blue, GW // 2, GH // 2, center=True)
             if self.rect.y > 200:
                 self.rect.y -= 5
 
-        screen.blit(self.image, self.rect)
+        DRAW_SURFACE.blit(self.image, self.rect)
+        # screen.blit(self.image, self.rect)  # original
         return game_over
 
 
@@ -322,7 +346,8 @@ class World():
 
     def draw(self):
         for tile in self.tile_list:
-            screen.blit(tile[0], tile[1])
+            DRAW_SURFACE.blit(tile[0], tile[1])
+            # screen.blit(tile[0], tile[1])  # original
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -407,11 +432,19 @@ async def main():
     global world
     global game_over
     global main_menu
+    global DRAW_SURFACE
     run = True
     while run:
         clock.tick(fps)
-        screen.blit(bg_img, (0, 0))
-        screen.blit(sun_img, (290, 150))
+        # Set the drawing surface depending on the target platform
+        if IS_WEB:
+            DRAW_SURFACE = game_surface
+        else:
+            DRAW_SURFACE = screen
+        DRAW_SURFACE.blit(bg_img, (0, 0))
+        # screen.blit(bg_img, (0, 0))  # original
+        DRAW_SURFACE.blit(sun_img, (290, 150))
+        # screen.blit(sun_img, (290, 150))  # original
 
         if main_menu:
             if exit_button.draw():
@@ -426,12 +459,12 @@ async def main():
                 if pygame.sprite.spritecollide(player, coin_group, True):
                     score += 1
                     coin_fx.play()
-                utils.draw_text(screen, "X " + str(score), font_score, white, tile_size - 10, 10)
-            blob_group.draw(screen)
-            platform_group.draw(screen)
-            lava_group.draw(screen)
-            coin_group.draw(screen)
-            exit_group.draw(screen)
+                utils.draw_text(DRAW_SURFACE, "X " + str(score), font_score, white, tile_size - 10, 10)
+            blob_group.draw(DRAW_SURFACE)
+            platform_group.draw(DRAW_SURFACE)
+            lava_group.draw(DRAW_SURFACE)
+            coin_group.draw(DRAW_SURFACE)
+            exit_group.draw(DRAW_SURFACE)
             game_over = player.update(game_over)
 
             if game_over == -1:
@@ -445,7 +478,7 @@ async def main():
                     world = reset_level(level)
                     game_over = 0
                 else:
-                    utils.draw_text(screen, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
+                    utils.draw_text(DRAW_SURFACE, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
                     if restart_button.draw():
                         level = 1
                         world = reset_level(level)
@@ -461,6 +494,11 @@ async def main():
                 elif event.key == pygame.K_F11:
                     pygame.display.toggle_fullscreen()
 
+        if IS_WEB:
+            # Scale the logical game surface into the visible display for web builds
+            scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
+            screen.blit(scaled_surface, (0, 0))
+            # screen.blit(scaled_surface, (0, 0))  # legacy approach
         pygame.display.flip()
 
     pygame.quit()
