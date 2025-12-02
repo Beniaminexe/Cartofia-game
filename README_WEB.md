@@ -31,8 +31,11 @@ cd "c:\Users\stefa\OneDrive\Desktop\cartofia game"
 # Convert pickled levels to JSON (optional)
 python tools/convert_levels.py
 
-# Build using pgbag (include img assets and level json files)
-pygbag -t web -o dist/web main.py --add-file img/* --add-file level*.json
+# Build using pygbag (pygbag package) — produce a static web build
+python -m pygbag --build --html --archive "$PWD" --title Cartofia
+# After building, files will be inside `build/web/`. To match earlier behavior, optionally copy to `dist/web`:
+mkdir -p dist/web
+rsync -a build/web/ dist/web/
 
 # Serve the dist/web directory using a static file server
 # On Windows you can use 'python -m http.server' in that folder

@@ -59,18 +59,25 @@ jobs:
           source ./emsdk/emsdk_env.sh
           python -m pip install -r requirements-web.txt || pip install pygbag
           mkdir -p dist/web
-          python -m pygbag -v -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*
+          python -m pygbag --build --html --archive "$PWD" --title Cartofia
       - name: List build output
         run: |
           echo "=== dist content ==="
           ls -la dist || true
-          echo "=== dist/web content ==="
-          ls -la dist/web || true
+          echo "=== build content ==="
+          ls -la build || true
+          echo "=== build/web content ==="
+          ls -la build/web || true
       - name: Fail if no web artifact produced
         run: |
-          if [ ! -d "dist/web" ]; then echo "Error: dist/web does not exist"; exit 1; fi
+          if [ ! -d "build/web" ]; then echo "Error: build/web does not exist"; exit 1; fi
           # ensure there is at least one file
-          if [ -z "$(ls -A dist/web 2>/dev/null)" ]; then echo "Error: dist/web is empty"; exit 1; fi
+          if [ -z "$(ls -A build/web 2>/dev/null)" ]; then echo "Error: build/web is empty"; exit 1; fi
+          if [ ! -f "build/web/index.html" ]; then echo "Error: build/web/index.html not found"; exit 1; fi
+      - name: Copy web artifact to dist/web
+        run: |
+          mkdir -p dist/web
+          rsync -a build/web/ dist/web/
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
