@@ -44,18 +44,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-      - name: Install Emscripten SDK (emsdk)
-        uses: webbertakken/emsdk@v2
-        with:
-          emsdk-version: '4c3c6c4'
       - name: Convert levels to JSON
         run: |
           python tools/convert_levels.py
       - name: Convert audio to ogg if needed
         run: |
           python tools/convert_audio.py img/music.mp3 img/music.ogg || true
-      - name: Run pgbag build
+      - name: Install Emscripten SDK (emsdk) and run web build
         run: |
+          set -e
+          git clone https://github.com/emscripten-core/emsdk.git
+          ./emsdk/emsdk install latest
+          ./emsdk/emsdk activate latest
+          source ./emsdk/emsdk_env.sh
+          python -m pip install -r requirements-web.txt || pip install pygbag
           mkdir -p dist/web
           python -m pygbag -v -t web -o dist/web main.py --add-file img/* --add-file level*.json --add-file tools/*
       - name: List build output
