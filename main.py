@@ -9,6 +9,8 @@ from typing import cast, Any
 import sys
 print(sys.executable)
 print(sys.version)
+print(">>> Cartofia web build: main.py starting")
+
 
 # --- Safe audio init ---
 IS_WEB = sys.platform == 'emscripten'
