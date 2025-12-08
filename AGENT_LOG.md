@@ -155,6 +155,14 @@ End of AGENT_LOG
 - [2025-12-02 10:30:00Z] (done) Added `.github/workflows/ci.yml` to run pytest, attempt web build with pgbag, and Windows build with PyInstaller.
 - [2025-12-02 10:35:00Z] (done) Added `.vscode/tasks.json` to provide Run/Build tasks for desktop, web and Windows.
 - [2025-12-02 10:38:00Z] (done) Added `tools/log_task.py` as a simple script other agents can run to append timestamped entries to `AGENT_LOG.md`.
+- [2025-12-08 20:20:00Z] (done) Refreshed `main.py` web loop: added debug overlay for first frames, per-frame logging, and stronger web menu skip; ensured scaling uses logical surface each frame.
+- [2025-12-08 20:32:00Z] (done) Rebuilt web bundle from scratch, recloned `build/web/archives`, and repacked `build/web/cartofia-game.apk` with assets/code under `assets/`; server now serves wheel + APK without 404.
+- [2025-12-08 20:35:00Z] (pending) Snapshot: served current web build from `build/web` (archives cloned, `cartofia-game.apk` loads 200, wheel 200); browser still shows black canvas though console shows APK mount complete and audio blocked pending user click. Next: verify Python prints/overlay render on web and confirm `main.py` entry executes.
+- [2025-12-08 20:45:00Z] (pending) Browser console log: pygbag bootstrap fetches wheel 200 and downloads `cartofia-game.apk` (size ~9.2MB) with BFS mount complete; canvas remains black, no visible debug overlay or Python stdout yet. Need to confirm if `main.py` executes (look for `[cartofia]` prints) and why scaled surface draws black despite mounted assets.
+- [2025-12-08 20:55:00Z] (done) Fixed entry guard: `main.py` now calls `asyncio.run(main())` even on web, so pygbag will actually enter the async game loop (previously skipped due to IS_WEB guard, causing black canvas). Rebuild web bundle to pick up the change.
+- [2025-12-08 21:05:00Z] (done) Hardened web rebuild script: `rebuild_web.sh` now creates `build/web` before running pygbag to avoid `FileNotFoundError` when writing `cartofia-game.html`; keeps cache clean with `rm -rf build/web build/web-cache` first.
+- [2025-12-08 21:10:00Z] (done) Added `build/web-cache` creation in `rebuild_web.sh` so pygbag can cache `default.tmpl`/`favicon.png` and avoid CDN write errors when the cache dir is missing.
+- [2025-12-08 21:20:00Z] (done) Manually repacked `build/web/cartofia-game.apk` (9.23MB) with `assets/` containing main.py, utils.py, web_main.py, game_wrapper.py, levels, img/, tests, etc., since pygbag did not emit the APK; archives recloned into `build/web/archives` for wheel serving.
 
 ## How to use the logging tool
 
@@ -180,4 +188,3 @@ End of AGENT_LOG
   - [done] Status: `screen_to_game_pos` and scaling implemented; UI adjusted to logical coords
 - Task: Add build tools & helpers
   - [done] Status: added `tools/` scripts: convert_levels, convert_audio, fetch_font, log_task
-

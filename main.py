@@ -7,11 +7,13 @@ from os import path
 import asyncio
 from typing import cast, Any
 import sys
+import traceback
 print(sys.executable)
 print(sys.version)
 
 # --- Safe audio init ---
 IS_WEB = sys.platform == 'emscripten'
+print(f"[cartofia] IS_WEB={IS_WEB} ASSET_DIR={utils.ASSET_DIR}")
 if IS_WEB:
     # Web builds should not try to use pulseaudio
     os.environ['SDL_AUDIODRIVER'] = 'dummy'
@@ -32,6 +34,7 @@ pygame.init()
 
 clock = pygame.time.Clock()
 fps = 60
+DEBUG_OVERLAY_FRAMES = 180  # draw debug overlay for first N frames on web
 
 # # --- Fullscreen setup ---
 # # display_info = pygame.display.Info()
@@ -89,12 +92,20 @@ game_surface = pygame.Surface((GW, GH))
 scale_x = screen_width / GW
 scale_y = screen_height / GH
 
+def update_scaling():
+    """Recompute scale based on the real canvas size (WEB: canvas can resize)."""
+    global scale_x, scale_y, screen_width, screen_height
+    sw, sh = screen.get_size()
+    screen_width, screen_height = sw, sh
+    scale_x = screen_width / GW
+    scale_y = screen_height / GH
+
 def screen_to_game_pos(pos):
     # Convert physical screen coords to game logical coords (useful for mouse handling on web)
     return (int(pos[0] / scale_x), int(pos[1] / scale_y))
 
-# Global draw surface: either the logical `game_surface` for web or direct `screen` for desktop
-DRAW_SURFACE = screen
+# Global draw surface: always the logical `game_surface`; scaled to the window each frame
+DRAW_SURFACE = game_surface
 
 
 
@@ -110,10 +121,12 @@ blue = (0, 0, 255)
 # --- Game variables ---
 tile_size = 50
 game_over = 0
-main_menu = True
+# Start menu only on desktop; web jumps straight in
+main_menu = False if IS_WEB else True
 level = 1
 max_levels = 11
 score = 0
+
 
 # --- Load images ---
 sun_img = utils.load_image('sun.png', alpha=True)
@@ -177,8 +190,8 @@ class Button():
 
     def draw(self):
         action = False
-        # Use scaled mouse coords on web builds so the buttons map to logical game coordinates
-        pos = screen_to_game_pos(pygame.mouse.get_pos()) if IS_WEB else pygame.mouse.get_pos()
+        # Use scaled mouse coords so the buttons map to logical game coordinates
+        pos = screen_to_game_pos(pygame.mouse.get_pos())
         if self.rect.collidepoint(pos):
             if pygame.mouse.get_pressed()[0] == 1 and not self.clicked:
                 action = True
@@ -449,78 +462,95 @@ class Game:
         restart_button = Button(GW // 2 - 50, GH // 2 + 100, restart_img)
         start_button = Button(GW // 2 - 350, GH // 2, start_img)
         exit_button = Button(GW // 2 + 150, GH // 2, exit_img)
+        if IS_WEB:
+            # WEB: skip menu entirely to avoid hit-test quirks and get straight into gameplay
+            global main_menu
+            main_menu = False
 
     async def run(self):
         global level, score, world, game_over, main_menu, DRAW_SURFACE
         run = True
+        frame = 0
+        print("[cartofia] Game.run start")
         # main game loop
-        while run:
-            clock.tick(fps)
-            # Set the drawing surface depending on the target platform
-            if IS_WEB:
+        try:
+            while run:
+                clock.tick(fps)
+                update_scaling()
                 DRAW_SURFACE = game_surface
-            else:
-                DRAW_SURFACE = screen
-            DRAW_SURFACE.blit(bg_img, (0, 0))
-            # screen.blit(bg_img, (0, 0))  # original
-            DRAW_SURFACE.blit(sun_img, (290, 150))
-            # screen.blit(sun_img, (290, 150))  # original
-
-            if main_menu:
-                if exit_button.draw():
-                    run = False
-                if start_button.draw():
+                if IS_WEB:
+                    # WEB: keep menu disabled in case globals were modified
                     main_menu = False
-            else:
-                world.draw()
-                if game_over == 0:
-                    blob_group.update()
-                    platform_group.update()
-                if pygame.sprite.spritecollide(cast(Any, player), coin_group, True):
-                    score += 1
-                    if coin_fx:
-                        coin_fx.play()
-                utils.draw_text(DRAW_SURFACE, "X " + str(score), font_score, white, tile_size - 10, 10)
-                blob_group.draw(DRAW_SURFACE)
-                platform_group.draw(DRAW_SURFACE)
-                lava_group.draw(DRAW_SURFACE)
-                coin_group.draw(DRAW_SURFACE)
-                exit_group.draw(DRAW_SURFACE)
-                game_over = player.update(game_over)
+                if frame < 3:
+                    print(f"[cartofia] frame {frame} screen_size={screen.get_size()} scale=({scale_x:.2f},{scale_y:.2f}) game_over={game_over} level={level}")
+                frame += 1
+                DRAW_SURFACE.blit(bg_img, (0, 0))
+                DRAW_SURFACE.blit(sun_img, (290, 150))
 
-                if game_over == -1:
-                    if restart_button.draw():
-                        world = reset_level(level)
-                        game_over = 0
-                        score = 0
-                if game_over == 1:
-                    level += 1
-                    if level <= max_levels:
-                        world = reset_level(level)
-                        game_over = 0
-                    else:
-                        utils.draw_text(DRAW_SURFACE, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
+                if main_menu:
+                    if exit_button.draw():
+                        run = False
+                    if start_button.draw():
+                        main_menu = False
+                else:
+                    world.draw()
+                    if game_over == 0:
+                        blob_group.update()
+                        platform_group.update()
+                    if pygame.sprite.spritecollide(cast(Any, player), coin_group, True):
+                        score += 1
+                        if coin_fx:
+                            coin_fx.play()
+                    utils.draw_text(DRAW_SURFACE, "X " + str(score), font_score, white, tile_size - 10, 10)
+                    blob_group.draw(DRAW_SURFACE)
+                    platform_group.draw(DRAW_SURFACE)
+                    lava_group.draw(DRAW_SURFACE)
+                    coin_group.draw(DRAW_SURFACE)
+                    exit_group.draw(DRAW_SURFACE)
+                    game_over = player.update(game_over)
+
+                    if game_over == -1:
                         if restart_button.draw():
-                            level = 1
                             world = reset_level(level)
                             game_over = 0
                             score = 0
+                    if game_over == 1:
+                        level += 1
+                        if level <= max_levels:
+                            world = reset_level(level)
+                            game_over = 0
+                        else:
+                            utils.draw_text(DRAW_SURFACE, "YOU WIN!", font, blue, GW // 2, GH // 2, center=True)
+                            if restart_button.draw():
+                                level = 1
+                                world = reset_level(level)
+                                game_over = 0
+                                score = 0
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    run = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
                         run = False
-                    elif event.key == pygame.K_F11:
-                        pygame.display.toggle_fullscreen()
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            run = False
+                        elif event.key == pygame.K_F11:
+                            pygame.display.toggle_fullscreen()
 
-            if IS_WEB:
-                # Scale the logical game surface into the visible display for web builds
+                # Scale the logical game surface into the visible display
                 scaled_surface = pygame.transform.smoothscale(game_surface, (screen_width, screen_height))
+                if IS_WEB:
+                    # draw a persistent debug overlay to confirm rendering in browser
+                    pygame.draw.rect(scaled_surface, (255, 0, 0), (10, 10, 240, 50))
+                    dbg_font = pygame.font.SysFont(None, 24)
+                    txt = dbg_font.render(f"WEB frame {frame} lvl {level} go {game_over}", True, (255, 255, 255))
+                    scaled_surface.blit(txt, (20, 20))
                 screen.blit(scaled_surface, (0, 0))
-            # screen.blit(scaled_surface, (0, 0))  # legacy approach
-            pygame.display.flip()
+                pygame.display.flip()
+                if IS_WEB:
+                    await asyncio.sleep(0)  # WEB: yield to browser so events/flips stay responsive
+        except Exception as e:
+            print("[cartofia] Exception in Game.run:", e)
+            traceback.print_exc()
 
         # End of game loop (while run)
         pygame.quit()
@@ -531,4 +561,5 @@ async def main():
     await game.run()
 
 if __name__ == "__main__":
+    # Call main() for both desktop and web; pygbag intercepts asyncio on web.
     asyncio.run(main())
